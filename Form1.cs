@@ -30,7 +30,7 @@ namespace AstarPF
         Point pStart, pMeta;
         public const int WielkoscX = 20;
         public const int WielkoscY = 20;
-        public const int DelayWPokazywaniuTrasy = 100;
+        public const int DelayWPokazywaniuTrasy = 50;
         public static List<List<Node>> grid = new List<List<Node>>();
         public static List<Node> UkonczoneSciezka;
 
