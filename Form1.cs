@@ -21,25 +21,24 @@ namespace AstarPF
      * CTRL - Trzeba kliknac aby postawic meta/start
      */
 
-    // Syf nadal ale mniejszy wiec dobrze
+    // Syf jeszcze mniejszy nawet mozna powiedziesc ze 0.3v XD
 
     public partial class Form1 : Form
     {
         public static List<List<Node>> grid = new List<List<Node>>();
         public static List<Node> UkonczoneSciezka;
 
-        List<List<blok>> bloki = new List<List<blok>>();
+        List<List<Blok>> bloki = new List<List<Blok>>();
         bool wkliknietyCTRL = false;
-        Vector2 pStart, pMeta;
         public const int WielkoscX = 20;
         public const int WielkoscY = 20;
         public const int DelayWPokazywaniuTrasy = 50;
 
-        class blok
+        class Blok
         {
-            public blok(int x, int y)
+            public Blok(int x, int y)
             {
-                punkt = new Point(x, y);
+                punkt = new Vector2(x, y);
                 this.picBlok = new PictureBox
                 {
                     Name = $"pictureBox {x} | {y}",
@@ -50,14 +49,76 @@ namespace AstarPF
                 };
             }
 
+            static public Vector2 pStart, pMeta;
             static public int iloscMeta = 0;
             static public int iloscStart = 0;
 
-            public Point punkt;
-            public bool sciana;
-            public bool start;
-            public bool meta;
             public PictureBox picBlok;
+            public Vector2 punkt;
+
+            public bool Sciana
+            {
+                get { return _sciana; }
+                set
+                {
+                    if (value)
+                    {
+                        if (_meta)
+                        {
+                            _meta = false;
+                            iloscMeta--;
+                        }
+                        else if (_start)
+                        {
+                            _start = false;
+                            iloscStart--;
+                        }
+
+                        _sciana = !_sciana;
+                        picBlok.BackColor = _sciana ? Color.White : Color.Blue;
+                    }
+                }
+            }
+
+            public bool Start
+            {
+                get { return _start; }
+                set
+                {
+                    if (value)
+                    {
+                        if (_meta)
+                            iloscMeta = 0;
+                        iloscStart++;
+                        _meta = false;
+                        _start = true;
+                        picBlok.BackColor = Color.Orange;
+                        pStart = punkt;
+                    }
+                }
+            }
+
+            public bool Meta
+            {
+                get { return _meta; }
+                set
+                {
+                    if (value)
+                    {
+                        if (_start)
+                            iloscStart = 0;
+                        iloscMeta++;
+                        _start = false;
+                        _meta = true;
+                        picBlok.BackColor = Color.Green;
+                        pMeta = punkt;
+                    }
+                }
+            }
+
+            private bool _sciana;
+            private bool _start;
+            private bool _meta;
         }
 
         public Form1()
@@ -70,10 +131,10 @@ namespace AstarPF
             // Tworzy liste 2D blokow
             for (int x = 0; x < WielkoscX; x++)
             {
-                List<blok> tempBloki = new List<blok>();
+                List<Blok> tempBloki = new List<Blok>();
                 for (int y = 0; y < WielkoscY; y++)
                 {
-                    var temp = new blok(x, y);
+                    var temp = new Blok(x, y);
                     tempBloki.Add(temp);
                 }
                 bloki.Add(tempBloki);
@@ -105,50 +166,17 @@ namespace AstarPF
                 if (tempX >= 0 && tempX < WielkoscX && tempY >= 0 && tempY < WielkoscY)
                 {
                     if (tempMouse.Button == MouseButtons.Left)
-                    {
-                        if (bloki[tempX][tempY].meta)
-                        {
-                            bloki[tempX][tempY].meta = false;
-                            blok.iloscMeta--;
-                        }
-                        else if (bloki[tempX][tempY].start)
-                        {
-                            bloki[tempX][tempY].start = false;
-                            blok.iloscStart--;
-                        }
-
-                        bloki[tempX][tempY].sciana = !bloki[tempX][tempY].sciana;
-                        bloki[tempX][tempY].picBlok.BackColor = bloki[tempX][tempY].sciana ? Color.White : Color.Blue;
-                    }
+                        bloki[tempX][tempY].Sciana = true;
                     else if (tempMouse.Button == MouseButtons.Right && wkliknietyCTRL)
                     {
                         wkliknietyCTRL = false;
-                        if(bloki[tempX][tempY].sciana)
-                        {
-                            bloki[tempX][tempY].sciana = false;
-                            bloki[tempX][tempY].picBlok.BackColor = Color.Blue;
-                        }
+                        if (bloki[tempX][tempY].Sciana)
+                            bloki[tempX][tempY].Sciana = true;
 
-                        if(blok.iloscStart == 0)
-                        {
-                            if (bloki[tempX][tempY].meta)
-                                blok.iloscMeta = 0;
-                            blok.iloscStart++;
-                            bloki[tempX][tempY].meta = false;
-                            bloki[tempX][tempY].start = true;
-                            bloki[tempX][tempY].picBlok.BackColor = Color.Orange;
-                            pStart = new Vector2(tempX, tempY);
-                        }
-                        else if (blok.iloscMeta == 0)
-                        {
-                            if(bloki[tempX][tempY].start)
-                                blok.iloscStart = 0;
-                            blok.iloscMeta++;
-                            bloki[tempX][tempY].meta = true;
-                            bloki[tempX][tempY].start = false;
-                            bloki[tempX][tempY].picBlok.BackColor = Color.Green;
-                            pMeta = new Vector2(tempX, tempY);
-                        }
+                        if (Blok.iloscStart == 0)
+                            bloki[tempX][tempY].Start = true;
+                        else if (Blok.iloscMeta == 0)
+                            bloki[tempX][tempY].Meta = true;
                     }
                 }
             }
@@ -156,11 +184,9 @@ namespace AstarPF
 
         async private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
-            var tempKey = (KeyEventArgs)e;
-
-            if (tempKey.KeyCode == Keys.ControlKey)
+            if (e.KeyCode == Keys.ControlKey)
                 wkliknietyCTRL = true;
-            else if (tempKey.KeyCode == Keys.P && blok.iloscMeta == 1 && blok.iloscStart == 1)
+            else if (e.KeyCode == Keys.P && Blok.iloscMeta == 1 && Blok.iloscStart == 1)
             {
                 grid = new List<List<Node>>();
                 for (int i = 0; i < WielkoscX; i++)
@@ -168,11 +194,12 @@ namespace AstarPF
                     List<Node> tempGrid = new List<Node>();
                     for (int j = 0; j < WielkoscY; j++)
                     {
-                        tempGrid.Add(new Node(new Vector2(bloki[i][j].punkt.X, bloki[i][j].punkt.Y), !bloki[i][j].sciana));
+                        tempGrid.Add(new Node(bloki[i][j].punkt, !bloki[i][j].Sciana));
                     }
                     grid.Add(tempGrid);
                 }
-                AStar.FindPath(grid[pStart.x][pStart.y], grid[pMeta.x][pMeta.y], grid);
+
+                AStar.FindPath(grid[Blok.pStart.x][Blok.pStart.y], grid[Blok.pMeta.x][Blok.pMeta.y], grid);
                 UkonczoneSciezka = AStar.UkonczonaSciezka;
                 if (UkonczoneSciezka == null)
                     return;
