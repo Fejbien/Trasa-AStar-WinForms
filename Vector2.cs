@@ -2,8 +2,8 @@
 {
     public class Vector2
     {
-        public int x { get; set; }
-        public int y { get; set; }
+        public int x;
+        public int y;
 
         public Vector2(int _x, int _y)
         {

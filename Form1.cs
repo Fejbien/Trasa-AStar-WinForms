@@ -16,7 +16,7 @@ namespace AstarPF
      * CTRL - Trzeba kliknac aby postawic meta/start
      */
 
-    // Syf jeszcze mniejszy nawet mozna powiedziesc ze 0.3v XD
+    // Syf jeszcze mniejszy nawet mozna powiedziesc ze 0.4v XD
 
     public partial class Form1 : Form
     {
