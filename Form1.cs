@@ -21,18 +21,19 @@ namespace AstarPF
      * CTRL - Trzeba kliknac aby postawic meta/start
      */
 
-    public partial class Form1 : Form// syf sie zadzial
+    // Syf nadal ale mniejszy wiec dobrze
+
+    public partial class Form1 : Form
     {
+        public static List<List<Node>> grid = new List<List<Node>>();
+        public static List<Node> UkonczoneSciezka;
+
         List<List<blok>> bloki = new List<List<blok>>();
         bool wkliknietyCTRL = false;
-        int iloscMeta = 0;
-        int iloscStart = 0;
-        Point pStart, pMeta;
+        Vector2 pStart, pMeta;
         public const int WielkoscX = 20;
         public const int WielkoscY = 20;
         public const int DelayWPokazywaniuTrasy = 50;
-        public static List<List<Node>> grid = new List<List<Node>>();
-        public static List<Node> UkonczoneSciezka;
 
         class blok
         {
@@ -48,6 +49,9 @@ namespace AstarPF
                     Visible = true
                 };
             }
+
+            static public int iloscMeta = 0;
+            static public int iloscStart = 0;
 
             public Point punkt;
             public bool sciana;
@@ -84,6 +88,10 @@ namespace AstarPF
                     this.Controls.Add(bloki[x][y].picBlok);
                 }
             }
+
+            // Nadaje Wielkosc w klasie node
+            Node.WielkoscX = WielkoscX;
+            Node.WielkoscY = WielkoscY;
         }
 
         private void Form1_Click(object sender, EventArgs e)
@@ -101,12 +109,12 @@ namespace AstarPF
                         if (bloki[tempX][tempY].meta)
                         {
                             bloki[tempX][tempY].meta = false;
-                            iloscMeta--;
+                            blok.iloscMeta--;
                         }
                         else if (bloki[tempX][tempY].start)
                         {
                             bloki[tempX][tempY].start = false;
-                            iloscStart--;
+                            blok.iloscStart--;
                         }
 
                         bloki[tempX][tempY].sciana = !bloki[tempX][tempY].sciana;
@@ -121,25 +129,25 @@ namespace AstarPF
                             bloki[tempX][tempY].picBlok.BackColor = Color.Blue;
                         }
 
-                        if(iloscStart == 0)
+                        if(blok.iloscStart == 0)
                         {
                             if (bloki[tempX][tempY].meta)
-                                iloscMeta = 0;
-                            iloscStart++;
+                                blok.iloscMeta = 0;
+                            blok.iloscStart++;
                             bloki[tempX][tempY].meta = false;
                             bloki[tempX][tempY].start = true;
                             bloki[tempX][tempY].picBlok.BackColor = Color.Orange;
-                            pStart = new Point(tempX, tempY);
+                            pStart = new Vector2(tempX, tempY);
                         }
-                        else if (iloscMeta == 0)
+                        else if (blok.iloscMeta == 0)
                         {
                             if(bloki[tempX][tempY].start)
-                                iloscStart = 0;
-                            iloscMeta++;
+                                blok.iloscStart = 0;
+                            blok.iloscMeta++;
                             bloki[tempX][tempY].meta = true;
                             bloki[tempX][tempY].start = false;
                             bloki[tempX][tempY].picBlok.BackColor = Color.Green;
-                            pMeta = new Point(tempX, tempY);
+                            pMeta = new Vector2(tempX, tempY);
                         }
                     }
                 }
@@ -152,8 +160,9 @@ namespace AstarPF
 
             if (tempKey.KeyCode == Keys.ControlKey)
                 wkliknietyCTRL = true;
-            else if (tempKey.KeyCode == Keys.P && iloscMeta == 1 && iloscStart == 1)
+            else if (tempKey.KeyCode == Keys.P && blok.iloscMeta == 1 && blok.iloscStart == 1)
             {
+                grid = new List<List<Node>>();
                 for (int i = 0; i < WielkoscX; i++)
                 {
                     List<Node> tempGrid = new List<Node>();
@@ -163,140 +172,17 @@ namespace AstarPF
                     }
                     grid.Add(tempGrid);
                 }
-                FindPath(grid[pStart.X][pStart.Y], grid[pMeta.X][pMeta.Y]);
+                AStar.FindPath(grid[pStart.x][pStart.y], grid[pMeta.x][pMeta.y], grid);
+                UkonczoneSciezka = AStar.UkonczonaSciezka;
+                if (UkonczoneSciezka == null)
+                    return;
+
                 foreach (var i in UkonczoneSciezka)
                 {
                     bloki[i.polozenie.x][i.polozenie.y].picBlok.BackColor = Color.Red;
                     await Task.Delay(DelayWPokazywaniuTrasy);
                 }
             }
-        }
-
-        static void FindPath(Node startNode, Node koniecNode)
-        {
-            List<Node> openSet = new List<Node>();
-            HashSet<Node> closedSet = new HashSet<Node>();
-            openSet.Add(startNode);
-
-            while (openSet.Count > 0)
-            {
-                Node node = openSet[0];
-                for (int i = 1; i < openSet.Count; i++)
-                {
-                    if (openSet[i].fKoszt < node.fKoszt || openSet[i].fKoszt == node.fKoszt)
-                    {
-                        if (openSet[i].hKoszt < node.hKoszt)
-                            node = openSet[i];
-                    }
-                }
-
-                openSet.Remove(node);
-                closedSet.Add(node);
-
-                if (node == koniecNode)
-                {
-                    RetracePath(startNode, koniecNode);
-                    return;
-                }
-
-                foreach (Node neighbour in Node.ZdobadziSasiadow(node))
-                {
-                    if (!neighbour.moznaChodzic || closedSet.Contains(neighbour))
-                    {
-                        continue;
-                    }
-
-                    int newCostToNeighbour = node.gKoszt + GetDistance(node, neighbour);
-                    if (newCostToNeighbour < neighbour.gKoszt || !openSet.Contains(neighbour))
-                    {
-                        neighbour.gKoszt = newCostToNeighbour;
-                        neighbour.hKoszt = GetDistance(neighbour, koniecNode);
-                        neighbour.rodzic = node;
-
-                        if (!openSet.Contains(neighbour))
-                            openSet.Add(neighbour);
-                    }
-                }
-            }
-        }
-
-        static void RetracePath(Node startNode, Node endNode)
-        {
-            List<Node> path = new List<Node>();
-            Node currentNode = endNode;
-
-            while (currentNode != startNode)
-            {
-                path.Add(currentNode);
-                currentNode = currentNode.rodzic;
-            }
-            path.Reverse();
-
-            UkonczoneSciezka = path;
-        }
-
-        static int GetDistance(Node nodeA, Node nodeB)
-        {
-            int dstX = Math.Abs(nodeA.polozenie.x - nodeB.polozenie.x);
-            int dstY = Math.Abs(nodeA.polozenie.y - nodeB.polozenie.y);
-
-            if (dstX > dstY)
-                return 14 * dstY + 10 * (dstX - dstY);
-            return 14 * dstX + 10 * (dstY - dstX);
-        }
-    }
-
-    public class Vector2
-    {
-        public int x { get; set; }
-        public int y { get; set; }
-
-        public Vector2(int _x, int _y)
-        {
-            x = _x;
-            y = _y;
-        }
-    }
-
-    public class Node
-    {
-        public Vector2 polozenie;
-        public bool moznaChodzic;
-
-        public int gKoszt;
-        public int hKoszt;
-        public Node rodzic;
-
-        public Node(Vector2 _polozenie, bool _moznaChodzic)
-        {
-            polozenie = _polozenie;
-            moznaChodzic = _moznaChodzic;
-        }
-
-        public int fKoszt { get { return gKoszt + hKoszt; } }
-
-        public static List<Node> ZdobadziSasiadow(Node node)
-        {
-            List<Node> nody = new List<Node>();
-
-            if (node.polozenie.x < Form1.WielkoscX - 1)
-            {
-                nody.Add(Form1.grid[node.polozenie.x + 1][node.polozenie.y]);
-            }
-            if (node.polozenie.x > 0)
-            {
-                nody.Add(Form1.grid[node.polozenie.x - 1][node.polozenie.y]);
-            }
-            if (node.polozenie.y < Form1.WielkoscY - 1)
-            {
-                nody.Add(Form1.grid[node.polozenie.x][node.polozenie.y + 1]);
-            }
-            if (node.polozenie.y > 0)
-            {
-                nody.Add(Form1.grid[node.polozenie.x][node.polozenie.y - 1]);
-            }
-
-            return nody;
         }
     }
 }
